@@ -20,7 +20,6 @@ component {
 		,          boolean useCropHint         = false
 		,          struct  fileProperties      = {}
 	) {
-		$SystemOutput( "resizing using vips... :)" );
 		var vipsImage = _getVipsImage( arguments.asset );
 
 		if ( vipsImage.getWidth() == arguments.width && wipsImage.getHeight() == arguments.height ) {
@@ -76,7 +75,6 @@ component {
 		, required numeric height
 		,          struct  fileProperties      = {}
 	) {
-		$SystemOutput( "Shrinking to size using vips... :)" );
 		var vipsImage = _getVipsImage( arguments.asset );
 		if ( vipsImage.getWidth() <= arguments.width && vipsImage.getHeight() <= arguments.height ) {
 			return arguments.asset;
