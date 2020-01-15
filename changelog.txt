@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.2
+
+* Attempt to release image references
+
 ## v0.1.1
 
 * Remove debugging
