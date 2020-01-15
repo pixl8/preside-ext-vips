@@ -1,0 +1,6 @@
+{
+	  "id"        : "preside-ext-vips"
+	, "title"     : "Image processing for Preside using libvips"
+	, "author"    : "Pixl8 Interactive"
+	, "version"   : "VERSION_NUMBER"
+}

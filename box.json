@@ -1,0 +1,20 @@
+{
+    "name":"PresideCMS Extension: VIPS image processor",
+    "type":"preside-extensions",
+    "version":"VERSION_NUMBER",
+    "private":true,
+    "author":"Pixl8 Group",
+    "directory":"application/extensions",
+    "repository":{
+        "type":"git",
+        "URL":"https://gitlab.pixl8.london/pixl8/extensions/preside-ext-vips"
+    },
+    "slug":"preside-ext-vips",
+    "projectURL":"https://gitlab.pixl8.london/pixl8/extensions/preside-ext-vips",
+    "ignore":[
+        ".git/*",
+        ".gitignore",
+        ".gitlab-ci.yml",
+        ".twgit_features_subject"
+    ]
+}
