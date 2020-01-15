@@ -20,53 +20,61 @@ component {
 		,          boolean useCropHint         = false
 		,          struct  fileProperties      = {}
 	) {
-		var vipsImage = _getVipsImage( arguments.asset );
+		try {
+			var vipsImage = _getVipsImage( arguments.asset );
 
-		if ( vipsImage.getWidth() == arguments.width && wipsImage.getHeight() == arguments.height ) {
-			return arguments.asset;
-		}
+			if ( vipsImage.getWidth() == arguments.width && wipsImage.getHeight() == arguments.height ) {
+				return arguments.asset;
+			}
 
-		vipsImage.autoRotate();
+			vipsImage.autoRotate();
 
 
-		if ( !arguments.height ) {
-			_scaleToFit( vipsImage, arguments.width, 0 );
-		} else if ( !arguments.width ) {
-			_scaleToFit( vipsImage, 0, arguments.height );
-		} else {
-			var requiresResize = true;
-
-			if ( arguments.useCropHint && !arguments.cropHintArea.isEmpty() ) {
-				vipsImage.crop( _getRectangle( argumentCollection=arguments.cropHintArea ) );
+			if ( !arguments.height ) {
+				_scaleToFit( vipsImage, arguments.width, 0 );
+			} else if ( !arguments.width ) {
+				_scaleToFit( vipsImage, 0, arguments.height );
 			} else {
-				if ( maintainAspectRatio ) {
-					var currentAspectRatio = vipsImage.getWidth() / vipsImage.getHeight();
-					var targetAspectRatio  = arguments.width / arguments.height;
+				var requiresResize = true;
 
-					if ( targetAspectRatio != currentAspectRatio ) {
-						if ( currentAspectRatio > targetAspectRatio ) {
-							_scaleToFit( vipsImage, 0, arguments.height );
-						} else {
-							_scaleToFit( vipsImage, arguments.width, 0 );
+				if ( arguments.useCropHint && !arguments.cropHintArea.isEmpty() ) {
+					vipsImage.crop( _getRectangle( argumentCollection=arguments.cropHintArea ) );
+				} else {
+					if ( maintainAspectRatio ) {
+						var currentAspectRatio = vipsImage.getWidth() / vipsImage.getHeight();
+						var targetAspectRatio  = arguments.width / arguments.height;
+
+						if ( targetAspectRatio != currentAspectRatio ) {
+							if ( currentAspectRatio > targetAspectRatio ) {
+								_scaleToFit( vipsImage, 0, arguments.height );
+							} else {
+								_scaleToFit( vipsImage, arguments.width, 0 );
+							}
+							vipsImage.crop( _getFocalPointRectangle( argumentCollection=arguments, vipsImage=vipsImage ) );
+							requiresResize = false;
 						}
-						vipsImage.crop( _getFocalPointRectangle( argumentCollection=arguments, vipsImage=vipsImage ) );
-						requiresResize = false;
 					}
+				}
+
+				if ( requiresResize ) {
+					var newDimensions = _getDimension( arguments.width, arguments.height );
+					var scale         = JavaCast( "boolean", !arguments.maintainAspectRatio );
+
+					vipsImage.resize( newDimensions, scale );
 				}
 			}
 
-			if ( requiresResize ) {
-				var newDimensions = _getDimension( arguments.width, arguments.height );
-				var scale         = JavaCast( "boolean", !arguments.maintainAspectRatio );
+			var newFileType = _getOutputFileType( arguments.fileProperties );
+			var stripMeta   = JavaCast( "boolean", true );
+			var binary      = vipsImage.writeToArray( newFileType, stripMeta );
 
-				vipsImage.resize( newDimensions, scale );
-			}
+		} catch( any e ) {
+			rethrow;
+		} finally {
+			vipsImage.release();
 		}
 
-		var newFileType   = _getOutputFileType( arguments.fileProperties );
-		var stripMeta     = JavaCast( "boolean", true );
-
-		return vipsImage.writeToArray( newFileType, stripMeta );
+		return binary;
 	}
 
 	public binary function shrinkToFit(
@@ -75,36 +83,43 @@ component {
 		, required numeric height
 		,          struct  fileProperties      = {}
 	) {
-		var vipsImage = _getVipsImage( arguments.asset );
-		if ( vipsImage.getWidth() <= arguments.width && vipsImage.getHeight() <= arguments.height ) {
-			return arguments.asset;
+		try {
+			var vipsImage = _getVipsImage( arguments.asset );
+			if ( vipsImage.getWidth() <= arguments.width && vipsImage.getHeight() <= arguments.height ) {
+				return arguments.asset;
+			}
+
+			var currentAspectRatio = vipsImage.getWidth() / vipsImage.getHeight();
+			var targetAspectRatio  = arguments.width / arguments.height;
+
+			if ( targetAspectRatio == currentAspectRatio ) {
+				var newDimensions = _getDimension( arguments.width, arguments.height );
+				var scale         = JavaCast( "boolean", false );
+
+				vipsImage.resize( newDimensions, scale );
+			} else if ( currentAspectRatio > targetAspectRatio ) {
+				_scaleToFit( vipsImage, 0, arguments.height );
+			} else {
+				_scaleToFit( vipsImage, arguments.width, 0 );
+			}
+
+			if ( vipsImage.getWidth() > arguments.width ) {
+				_scaleToFit( vipsImage, arguments.width, 0 );
+			} else if ( vipsImage.getHeight() > arguments.height ){
+				_scaleToFit( vipsImage, 0, arguments.height );
+			}
+
+			var newFileType   = _getOutputFileType( arguments.fileProperties );
+			var stripMeta     = JavaCast( "boolean", true );
+
+			var binary = vipsImage.writeToArray( newFileType, stripMeta );
+		} catch( any e ) {
+			rethrow;
+		} finally {
+			vipsImage.release();
 		}
 
-		var currentAspectRatio = vipsImage.getWidth() / vipsImage.getHeight();
-		var targetAspectRatio  = arguments.width / arguments.height;
-
-		if ( targetAspectRatio == currentAspectRatio ) {
-			var newDimensions = _getDimension( arguments.width, arguments.height );
-			var scale         = JavaCast( "boolean", false );
-
-			vipsImage.resize( newDimensions, scale );
-		} else if ( currentAspectRatio > targetAspectRatio ) {
-			_scaleToFit( vipsImage, 0, arguments.height );
-		} else {
-			_scaleToFit( vipsImage, arguments.width, 0 );
-		}
-
-		if ( vipsImage.getWidth() > arguments.width ) {
-			_scaleToFit( vipsImage, arguments.width, 0 );
-		} else if ( vipsImage.getHeight() > arguments.height ){
-			_scaleToFit( vipsImage, 0, arguments.height );
-		}
-
-		var newFileType   = _getOutputFileType( arguments.fileProperties );
-		var stripMeta     = JavaCast( "boolean", true );
-
-		return vipsImage.writeToArray( newFileType, stripMeta );
-		WriteDump( "todo" ); abort;
+		return binary;
 	}
 
 // PRIVATE HELPERS
