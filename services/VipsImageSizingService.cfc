@@ -5,7 +5,12 @@
 component {
 
 // CONSTRUCTOR
-	public any function init() {
+	/**
+	 * @svgToPngService.inject svgToPngService
+	 *
+	 */
+	public any function init( required any svgToPngService ) {
+		_setSvgToPngService( arguments.svgToPngService );
 		return this;
 	}
 
@@ -21,6 +26,12 @@ component {
 		,          struct  fileProperties      = {}
 	) {
 		try {
+			var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
+			if ( isSvg ) {
+				arguments.asset = _getSvgToPngService().SVGToPngBinary( arguments.asset, arguments.width, arguments.height );
+				fileProperties.fileExt = "png";
+			}
+
 			var vipsImage = _getVipsImage( arguments.asset );
 
 			if ( vipsImage.getWidth() == arguments.width && wipsImage.getHeight() == arguments.height ) {
@@ -50,7 +61,8 @@ component {
 							} else {
 								_scaleToFit( vipsImage, arguments.width, 0 );
 							}
-							vipsImage.crop( _getFocalPointRectangle( argumentCollection=arguments, vipsImage=vipsImage ) );
+
+							_cropToFocalPoint( argumentCollection=arguments, vipsImage=vipsImage );
 							requiresResize = false;
 						}
 					}
@@ -71,7 +83,7 @@ component {
 		} catch( any e ) {
 			rethrow;
 		} finally {
-			vipsImage.release();
+			_release( vipsImage ?: "" );
 		}
 
 		return binary;
@@ -84,6 +96,11 @@ component {
 		,          struct  fileProperties      = {}
 	) {
 		try {
+			var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
+			if ( isSvg ) {
+				arguments.asset = _getSvgToPngService().SVGToPngBinary( arguments.asset, arguments.width, arguments.height );
+				fileProperties.fileExt = "png";
+			}
 			var vipsImage = _getVipsImage( arguments.asset );
 			if ( vipsImage.getWidth() <= arguments.width && vipsImage.getHeight() <= arguments.height ) {
 				return arguments.asset;
@@ -116,13 +133,62 @@ component {
 		} catch( any e ) {
 			rethrow;
 		} finally {
-			vipsImage.release();
+			_release( vipsImage ?: "" );
 		}
 
 		return binary;
 	}
 
+	public struct function getImageInformation( required binary asset ) {
+		var vipsImage = "";
+
+		try {
+			vipsImage = _getVipsImage( arguments.asset );
+		} catch( any e ) {
+			throw( type="AssetTransformer.shrinkToFit.notAnImage" );
+		}
+
+		try {
+			try {
+				vipsImage.autoRotate();
+			} catch( any e ) {}
+
+			try {
+				var imageInfo = {
+					  width  = vipsImage.getWidth()
+					, height = vipsImage.getHeight()
+				};
+			} catch( any e ) {
+				throw( type="AssetTransformer.shrinkToFit.notAnImage" );
+			}
+		} catch( any e ) {
+			rethrow;
+		} finally {
+			_release( vipsImage ?: "" );
+		}
+
+		return imageInfo;
+	}
+
 // PRIVATE HELPERS
+	private void function _cropToFocalPoint(
+		  required any     vipsImage
+		, required numeric width
+		, required numeric height
+		, required string  focalPoint
+	) {
+		var rectangle = _getFocalPointRectangle( argumentCollection=arguments );
+
+		if ( rectangle.getX() < 0 || ( rectangle.getX() + rectangle.getWidth() ) > vipsImage.getWidth() ) {
+			return;
+		}
+		if ( rectangle.getY() < 0 || ( rectangle.getY() + rectangle.getHeight() ) > vipsImage.getHeight() ) {
+			return;
+		}
+
+		vipsImage.crop( rectangle );
+	}
+
 	private any function _getFocalPointRectangle(
 		  required any     vipsImage
 		, required numeric width
@@ -202,6 +268,17 @@ component {
 		return variables._lib;
 	}
 
-// GETTERS AND SETTERS
+	private void function _release( required any vipsImage ) {
+		if ( IsObject( arguments.vipsImage ) && IsInstanceOf( arguments.vipsImage, "com.criteo.vips.VipsImage" ) ) {
+			vipsImage.release();
+		}
+	}
 
+// GETTERS AND SETTERS
+	private any function _getSvgToPngService() {
+	    return _svgToPngService;
+	}
+	private void function _setSvgToPngService( required any svgToPngService ) {
+	    _svgToPngService = arguments.svgToPngService;
+	}
 }
