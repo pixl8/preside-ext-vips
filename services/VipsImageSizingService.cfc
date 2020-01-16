@@ -269,8 +269,10 @@ component {
 	}
 
 	private void function _release( required any vipsImage ) {
-		if ( IsObject( arguments.vipsImage ) && IsInstanceOf( arguments.vipsImage, "com.criteo.vips.VipsImage" ) ) {
+		try {
 			vipsImage.release();
+		} catch( any e ) {
+			// might not be a vipsimage object
 		}
 	}
 
