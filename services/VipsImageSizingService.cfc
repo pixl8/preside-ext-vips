@@ -50,7 +50,10 @@ component {
 							} else {
 								_scaleToFit( vipsImage, arguments.width, 0 );
 							}
-							vipsImage.crop( _getFocalPointRectangle( argumentCollection=arguments, vipsImage=vipsImage ) );
+
+							if ( Len( Trim( arguments.focalPoint ) ) && arguments.focalPoint != "0.5,0.5" ) {
+								vipsImage.crop( _getFocalPointRectangle( argumentCollection=arguments, vipsImage=vipsImage ) );
+							}
 							requiresResize = false;
 						}
 					}
@@ -120,6 +123,37 @@ component {
 		}
 
 		return binary;
+	}
+
+	public struct function getImageInformation( required binary asset ) {
+		var vipsImage = "";
+
+		try {
+			vipsImage = _getVipsImage( arguments.asset );
+		} catch( any e ) {
+			throw( type="AssetTransformer.shrinkToFit.notAnImage" );
+		}
+
+		try {
+			try {
+				vipsImage.autoRotate();
+			} catch( any e ) {}
+
+			try {
+				var imageInfo = {
+					  width  = vipsImage.getWidth()
+					, height = vipsImage.getHeight()
+				};
+			} catch( any e ) {
+				throw( type="AssetTransformer.shrinkToFit.notAnImage" );
+			}
+		} catch( any e ) {
+			rethrow;
+		} finally {
+			vipsImage.release();
+		}
+
+		return imageInfo;
 	}
 
 // PRIVATE HELPERS
