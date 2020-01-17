@@ -1,17 +1,28 @@
 # VIPS Image processor
 
-This extension swaps out the ImageMagick/native lucee implementation of image resizing in favour of using libvips. All that is needed is to install the extension.
+This extension swaps out the ImageMagick/native lucee implementation of image resizing in favour of using [libvips](https://libvips.github.io/libvips/).
+
+## Pre-requisites and configuration
+
+It is expected that [libvips](https://libvips.github.io/libvips/) be installed on your system, along with `libexif`. For example, on Ubuntu:
+
+```bash
+apt install libvips libvips-tools libexif12
+```
+
+Once installed, you can configure vips in your `Config.cfc`. **Note:** You only need to do this if you need non-default values. Defaults are shown below:
+
+```cfc
+function configure() {
+	// ...
+
+	settings.vips.binDir  = "/usr/bin/"; // where vips tools binary files are found
+	settings.vips.timeout = 60;          // longest time to wait for a VIPs operation to complete
+	
+	// ...
+}
+```
 
 ## Limitations
 
-* Libvips cannot convert pages of PDFs into jpgs. We leave the PDF Preview transformation to ImageMagick/native Lucee implementation.
-
-## Build notes
-
-We had to build the `services/lib/JVips-1.0.0.jar` file from source in order to include it in this project. This was achieved in a linux environment by:
-
-1. Cloning this project: [https://github.com/criteo/JVips](https://github.com/criteo/JVips)
-2. Running `./setup-for-ubuntu-wsl-linux-target.sh` from the above project
-3. Running `./build.sh --without-w64` from the above project
-
-This created the jar file at `~/.m2/repository/JVips/JVips/1.0.0` which was then copied into this project.
+* We have not yet implemented the conversion of pages of PDFs into jpgs. We leave the PDF Preview transformation to ImageMagick/native Lucee implementation.

@@ -7,10 +7,15 @@ component {
 // CONSTRUCTOR
 	/**
 	 * @svgToPngService.inject svgToPngService
+	 * @vipsSettings.inject    coldbox:setting:vips
 	 *
 	 */
-	public any function init( required any svgToPngService ) {
+	public any function init( required any svgToPngService, required struct vipsSettings ) {
 		_setSvgToPngService( arguments.svgToPngService );
+		_setBinDir( arguments.vipsSettings.binDir ?: "/usr/bin" );
+		_setTimeout( Val( arguments.vipsSettings.timeout ?: 60 ) );
+		_setVipsTmpDirectory( GetTempDirectory() & "/vips/" );
+
 		return this;
 	}
 
@@ -25,67 +30,63 @@ component {
 		,          boolean useCropHint         = false
 		,          struct  fileProperties      = {}
 	) {
-		try {
-			var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
-			if ( isSvg ) {
-				arguments.asset = _getSvgToPngService().SVGToPngBinary( arguments.asset, arguments.width, arguments.height );
-				fileProperties.fileExt = "png";
-			}
+		var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
+		if ( isSvg ) {
+			arguments.asset = _getSvgToPngService().SVGToPngBinary( arguments.asset, arguments.width, arguments.height );
+			fileProperties.fileExt = "png";
 
-			var vipsImage = _getVipsImage( arguments.asset );
-
-			if ( vipsImage.getWidth() == arguments.width && wipsImage.getHeight() == arguments.height ) {
-				return arguments.asset;
-			}
-
-			vipsImage.autoRotate();
-
-
-			if ( !arguments.height ) {
-				_scaleToFit( vipsImage, arguments.width, 0 );
-			} else if ( !arguments.width ) {
-				_scaleToFit( vipsImage, 0, arguments.height );
-			} else {
-				var requiresResize = true;
-
-				if ( arguments.useCropHint && !arguments.cropHintArea.isEmpty() ) {
-					vipsImage.crop( _getRectangle( argumentCollection=arguments.cropHintArea ) );
-				} else {
-					if ( maintainAspectRatio ) {
-						var currentAspectRatio = vipsImage.getWidth() / vipsImage.getHeight();
-						var targetAspectRatio  = arguments.width / arguments.height;
-
-						if ( targetAspectRatio != currentAspectRatio ) {
-							if ( currentAspectRatio > targetAspectRatio ) {
-								_scaleToFit( vipsImage, 0, arguments.height );
-							} else {
-								_scaleToFit( vipsImage, arguments.width, 0 );
-							}
-
-							_cropToFocalPoint( argumentCollection=arguments, vipsImage=vipsImage );
-							requiresResize = false;
-						}
-					}
-				}
-
-				if ( requiresResize ) {
-					var newDimensions = _getDimension( arguments.width, arguments.height );
-					var scale         = JavaCast( "boolean", !arguments.maintainAspectRatio );
-
-					vipsImage.resize( newDimensions, scale );
-				}
-			}
-
-			var newFileType = _getOutputFileType( arguments.fileProperties );
-			var stripMeta   = JavaCast( "boolean", true );
-			var binary      = vipsImage.writeToArray( newFileType, stripMeta );
-
-		} catch( any e ) {
-			rethrow;
-		} finally {
-			_release( vipsImage ?: "" );
+			return arguments.asset;
 		}
 
+		var sourceFile = _tmpFile( arguments.asset );
+		var targetFile = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
+		var imageInfo  = getImageInformation( filePath=sourceFile );
+
+		if ( imageInfo.width == arguments.width && imageInfo.height == arguments.height ) {
+			return arguments.asset;
+		}
+
+		FileCopy( sourceFile, targetFile );
+		if ( imageInfo.requiresOrientation ) {
+			targetFile = _autoRotate( targetFile );
+		}
+
+		if ( !arguments.height ) {
+			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0 );
+		} else if ( !arguments.width ) {
+			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height );
+		} else {
+			var requiresResize = true;
+
+			if ( arguments.useCropHint && !arguments.cropHintArea.isEmpty() ) {
+				targetFile = _crop( targetFile, imageInfo, arguments.cropHintArea );
+				imageInfo = getImageInformation( filePath=targetFile );
+			} else {
+				if ( maintainAspectRatio ) {
+					var currentAspectRatio = imageInfo.width / imageInfo.height;
+					var targetAspectRatio  = arguments.width / arguments.height;
+
+					if ( targetAspectRatio != currentAspectRatio ) {
+						if ( currentAspectRatio > targetAspectRatio ) {
+							targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height );
+						} else {
+							targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0 );
+						}
+
+						imageInfo = getImageInformation( filePath=targetFile );
+						targetFile = _cropToFocalPoint( argumentCollection=arguments, targetFile=targetFile, imageInfo=imageInfo );
+						requiresResize = false;
+					}
+				}
+			}
+
+			if ( requiresResize ) {
+				targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height );
+			}
+		}
+
+		var binary = FileReadBinary( targetFile );
+		_deleteFile( targetFile );
 		return binary;
 	}
 
@@ -95,102 +96,107 @@ component {
 		, required numeric height
 		,          struct  fileProperties      = {}
 	) {
-		try {
-			var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
-			if ( isSvg ) {
-				arguments.asset = _getSvgToPngService().SVGToPngBinary( arguments.asset, arguments.width, arguments.height );
-				fileProperties.fileExt = "png";
-			}
-			var vipsImage = _getVipsImage( arguments.asset );
-			if ( vipsImage.getWidth() <= arguments.width && vipsImage.getHeight() <= arguments.height ) {
-				return arguments.asset;
-			}
+		var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
+		if ( isSvg ) {
+			arguments.asset = _getSvgToPngService().SVGToPngBinary( arguments.asset, arguments.width, arguments.height );
+			fileProperties.fileExt = "png";
 
-			var currentAspectRatio = vipsImage.getWidth() / vipsImage.getHeight();
-			var targetAspectRatio  = arguments.width / arguments.height;
-
-			if ( targetAspectRatio == currentAspectRatio ) {
-				var newDimensions = _getDimension( arguments.width, arguments.height );
-				var scale         = JavaCast( "boolean", false );
-
-				vipsImage.resize( newDimensions, scale );
-			} else if ( currentAspectRatio > targetAspectRatio ) {
-				_scaleToFit( vipsImage, 0, arguments.height );
-			} else {
-				_scaleToFit( vipsImage, arguments.width, 0 );
-			}
-
-			if ( vipsImage.getWidth() > arguments.width ) {
-				_scaleToFit( vipsImage, arguments.width, 0 );
-			} else if ( vipsImage.getHeight() > arguments.height ){
-				_scaleToFit( vipsImage, 0, arguments.height );
-			}
-
-			var newFileType   = _getOutputFileType( arguments.fileProperties );
-			var stripMeta     = JavaCast( "boolean", true );
-
-			var binary = vipsImage.writeToArray( newFileType, stripMeta );
-		} catch( any e ) {
-			rethrow;
-		} finally {
-			_release( vipsImage ?: "" );
+			return arguments.asset;
 		}
+
+		var sourceFile = _tmpFile( arguments.asset );
+		var targetFile = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
+		var imageInfo  = getImageInformation( filePath=sourceFile );
+
+		if ( imageInfo.width <= arguments.width && imageInfo.height <= arguments.height ) {
+			return arguments.asset;
+		}
+
+		FileCopy( sourceFile, targetFile );
+		if ( imageInfo.requiresOrientation ) {
+			targetFile = _autoRotate( targetFile );
+		}
+
+		var currentAspectRatio = imageInfo.width / imageInfo.height;
+		var targetAspectRatio  = arguments.width / arguments.height;
+
+		if ( targetAspectRatio == currentAspectRatio ) {
+			targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height );
+		} else if ( currentAspectRatio > targetAspectRatio ) {
+			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height );
+		} else {
+			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0 );
+		}
+
+		imageInfo = getImageInformation( filePath=targetFile );
+
+		if ( imageInfo.width > arguments.width ) {
+			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0 );
+		} else if ( imageInfo.height > arguments.height ){
+			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height );
+		}
+
+		var binary = FileReadBinary( targetFile );
+		_deleteFile( targetFile );
 
 		return binary;
 	}
 
-	public struct function getImageInformation( required binary asset ) {
-		var vipsImage = "";
+	public struct function getImageInformation( binary asset, string filePath=_tmpFile( arguments.asset ) ) {
+		var rawInfo = Trim( _exec( command="vipsheader", args='-a "#arguments.filePath#"' ) );
+		var info = {};
+		var key = "";
+		var value = "";
 
-		try {
-			vipsImage = _getVipsImage( arguments.asset );
-		} catch( any e ) {
-			throw( type="AssetTransformer.shrinkToFit.notAnImage" );
-		}
-
-		try {
-			try {
-				vipsImage.autoRotate();
-			} catch( any e ) {}
-
-			try {
-				var imageInfo = {
-					  width  = vipsImage.getWidth()
-					, height = vipsImage.getHeight()
-				};
-			} catch( any e ) {
-				throw( type="AssetTransformer.shrinkToFit.notAnImage" );
+		for( var line in ListToArray( rawInfo, Chr(10) & Chr(13) ) ) {
+			if ( ListLen( line, ":" ) > 1 ) {
+				info[ Trim( ListFirst( line, ":" ) ) ] = Trim( ListRest( line, ":" ) );
 			}
-		} catch( any e ) {
-			rethrow;
-		} finally {
-			_release( vipsImage ?: "" );
 		}
 
-		return imageInfo;
+		if ( Val( info.width ?: "" ) && Val( info.height ?: "" ) ) {
+			var orientation = Val( info.orientation ?: ( info[ "exif-ifd0-Orientation" ] ?: 1 ) );
+
+			if ( orientation == 8 || orientation == 6 ) {
+				info.requiresOrientation = true;
+				var tmpWidth = info.width;
+				info.width = info.height;
+				info.height = tmpWidth;
+			} else {
+				info.requiresOrientation = false;
+			}
+
+			return info;
+		}
+
+		throw( type="AssetTransformer.shrinkToFit.notAnImage" );
 	}
 
 // PRIVATE HELPERS
-	private void function _cropToFocalPoint(
-		  required any     vipsImage
-		, required numeric width
-		, required numeric height
-		, required string  focalPoint
-	) {
-		var rectangle = _getFocalPointRectangle( argumentCollection=arguments );
+	private string function _exec( required string command, required string args ) {
+		var result  = "";
 
-		if ( rectangle.getX() < 0 || ( rectangle.getX() + rectangle.getWidth() ) > vipsImage.getWidth() ) {
-			return;
-		}
-		if ( rectangle.getY() < 0 || ( rectangle.getY() + rectangle.getHeight() ) > vipsImage.getHeight() ) {
-			return;
-		}
+		execute name      = _getBinDir() & arguments.command
+				arguments = arguments.args
+				timeout   = _getTimeout()
+				variable  = "result";
 
-		vipsImage.crop( rectangle );
+		return result;
 	}
 
-	private any function _getFocalPointRectangle(
-		  required any     vipsImage
+	private string function _tmpFile( required binary asset ) {
+		var filePath = _getVipsTmpDirectory() & Hash( asset );
+
+		if ( !FileExists( filePath ) ) {
+			FileWrite( filePath, arguments.asset );
+		}
+
+		return filePath;
+	}
+
+	private struct function _getFocalPointRectangle(
+		  required string  targetFile
+		, required struct  imageInfo
 		, required numeric width
 		, required numeric height
 		, required string  focalPoint
@@ -200,87 +206,143 @@ component {
 		var cropCentreX = originX + int( arguments.width  / 2 );
 		var cropCentreY = originY + int( arguments.height / 2 );
 		var focalPoint  = len( arguments.focalPoint ) ? arguments.focalPoint : "0.5,0.5";
-		var focalPointX = int( listFirst( focalPoint ) * vipsImage.getWidth()  );
-		var focalPointY = int( listLast(  focalPoint ) * vipsImage.getHeight() );
+		var focalPointX = int( listFirst( focalPoint ) * imageInfo.width  );
+		var focalPointY = int( listLast(  focalPoint ) * imageInfo.height );
 
 		if ( focalPointX > cropCentreX ) {
-			originX = min( originX + ( focalPointX - cropCentreX ), vipsImage.getWidth() - arguments.width );
+			originX = min( originX + ( focalPointX - cropCentreX ), imageInfo.width - arguments.width );
 		}
 		if ( focalPointY > cropCentreY ) {
-			originY = min( originY + ( focalPointY - cropCentreY ), vipsImage.getHeight() - arguments.height );
+			originY = min( originY + ( focalPointY - cropCentreY ), imageInfo.height - arguments.height );
 		}
 
-		return _getRectangle( originX, originY, arguments.width, arguments.height );
+		return {
+			  x      = originX
+			, y      = originY
+			, width  = arguments.width
+			, height = arguments.height
+		};
 	}
 
-	private void function _scaleToFit(
-		  required any     vipsImage
+	private string function _scaleToFit(
+		  required string  targetFile
+		, required struct  imageInfo
 		, required numeric width
 		, required numeric height
 	) {
 		if ( !arguments.height ) {
-			arguments.height = vipsImage.getHeight() * ( arguments.width / vipsImage.getWidth() );
+			arguments.height = imageInfo.height * ( arguments.width / imageInfo.width );
 		} else if ( !arguments.width ) {
-			arguments.width = vipsImage.getWidth() * ( arguments.height / vipsImage.getHeight() );
-		}
-		var newDimensions = _getDimension( arguments.width, arguments.height );
-		var scale         = JavaCast( "boolean", false );
-
-		vipsImage.resize( newDimensions, scale );
-	}
-
-	private any function _getVipsImage( required binary imageBinary ) {
-		return _jvipsObj( "VipsImageImpl" ).init( arguments.imageBinary, JavaCast( "int", Len( arguments.imageBinary ) ) );
-	}
-
-	private any function _getOutputFileType( required struct fileProperties ) {
-		switch( arguments.fileProperties.fileExt ?: "" ){
-			case "png":
-			case "gif":
-				arguments.fileProperties.fileExt = "png";
-				return _jvipsObj( "ImageFormat" ).PNG;
+			arguments.width = imageInfo.width * ( arguments.height / imageInfo.height );
 		}
 
-		arguments.fileProperties.fileExt = "jpg";
-		return _jvipsObj( "ImageFormat" ).JPG;
+		return _thumbnail( argumentCollection=arguments );
 	}
 
-	private any function _getDimension( required numeric width, required numeric height ) {
-		return CreateObject( "java", "java.awt.Dimension" ).init( JavaCast( "int", arguments.width ), JavaCast( "int", arguments.height ) );
-	}
-
-	private any function _getRectangle( required numeric x, required numeric y, required numeric width, required numeric height ) {
-		return CreateObject( "java", "java.awt.Rectangle" ).init( JavaCast( "int", arguments.x ), JavaCast( "int", arguments.y ), JavaCast( "int", arguments.width ), JavaCast( "int", arguments.height ) );
-	}
-
-	private any function _jvipsObj( required string className ) {
-		return CreateObject( "java", "com.criteo.vips.#arguments.className#", _getLib() );
-	}
-
-	private array function _getLib() {
-		return _lib ?: _initLib();
-	}
-
-	private array function _initLib() {
-		var libDir = ExpandPath( "/app/extensions/preside-ext-vips/services/lib" );
-		variables._lib = DirectoryList( libDir, false, "path", "*.jar" );
-
-		return variables._lib;
-	}
-
-	private void function _release( required any vipsImage ) {
+	private string function _thumbnail(
+		  required string  targetFile
+		, required struct  imageInfo
+		, required numeric width
+		, required numeric height
+	){
+		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "tn_" );
 		try {
-			vipsImage.release();
-		} catch( any e ) {
-			// might not be a vipsimage object
+			_exec( "vipsthumbnail", "-s #arguments.width#x#arguments.height# -d ""#arguments.targetFile#""" );
+		} finally {
+			_deleteFile( arguments.targetFile );
 		}
+
+		return newTargetFile;
+	}
+
+	private string function _crop(
+		  required string  targetFile
+		, required struct  imageInfo
+		, required struct  cropArea
+	) {
+		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "crop_" );
+		try {
+			_exec( "vips", 'crop "#targetFile#" "#newTargetFile#" #cropArea.x# #cropArea.y# #cropArea.width# #cropArea.height#' );
+		} finally {
+			_deleteFile( arguments.targetFile );
+		}
+
+		return newTargetFile;
+	}
+
+	private string function _cropToFocalPoint(
+		  required string  targetFile
+		, required struct  imageInfo
+		, required numeric width
+		, required numeric height
+		, required string  focalPoint
+	) {
+		var rectangle = _getFocalPointRectangle( argumentCollection=arguments );
+
+		if ( rectangle.x < 0 || ( rectangle.x + rectangle.width ) > imageInfo.width ) {
+			return targetFile;
+		}
+		if ( rectangle.y < 0 || ( rectangle.y + rectangle.height ) > imageInfo.height ) {
+			return targetFile;
+		}
+
+		return _crop( targetFile, imageInfo, rectangle );
+	}
+
+	private string function _autoRotate( required string targetFile ) {
+		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "crop_" );
+		try {
+			_exec( "vips", 'autorot "#targetFile#" "#newTargetFile#"' );
+		} finally {
+			_deleteFile( arguments.targetFile );
+		}
+
+		return newTargetFile;
+	}
+
+	private void function _deleteFile( required string path ) {
+		try {
+			FileDelete( arguments.path );
+		} catch( any e ) {}
+	}
+
+	private string function _pathFileNamePrefix( required string path, required string prefix ) {
+		var fileName = ListLast( arguments.path, "\/" );
+		var dirName = GetDirectoryFromPath( arguments.path );
+
+		return dirName & arguments.prefix & fileName;
 	}
 
 // GETTERS AND SETTERS
 	private any function _getSvgToPngService() {
-	    return _svgToPngService;
+		return _svgToPngService;
 	}
 	private void function _setSvgToPngService( required any svgToPngService ) {
-	    _svgToPngService = arguments.svgToPngService;
+		_svgToPngService = arguments.svgToPngService;
+	}
+
+	private string function _getVipsTmpDirectory() {
+		return _vipsTmpDirectory;
+	}
+	private void function _setVipsTmpDirectory( required string vipsTmpDirectory ) {
+		_vipsTmpDirectory = arguments.vipsTmpDirectory;
+
+		DirectoryCreate( _vipsTmpDirectory, true, true );
+	}
+
+	private string function _getBinDir() {
+		return _binDir;
+	}
+	private void function _setBinDir( required string binDir ) {
+		_binDir = arguments.binDir;
+		_binDir = Replace( _binDir, "\", "/", "all" );
+		_binDir = ReReplace( _binDir, "([^/])$", "\1/" );
+	}
+
+	private numeric function _getTimeout() {
+		return _timeout;
+	}
+	private void function _setTimeout( required numeric timeout ) {
+		_timeout = arguments.timeout;
 	}
 }
