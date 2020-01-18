@@ -246,8 +246,9 @@ component {
 		, required numeric height
 	){
 		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "tn_" );
+		var outputFormat  = "tn_%s.#ListLast( newTargetFile, '.' )#";
 		try {
-			_exec( "vipsthumbnail", "-s #arguments.width#x#arguments.height# -d ""#arguments.targetFile#""" );
+			_exec( "vipsthumbnail", "-s #arguments.width#x#arguments.height# -d -o #outputFormat# ""#arguments.targetFile#""" );
 		} finally {
 			_deleteFile( arguments.targetFile );
 		}
