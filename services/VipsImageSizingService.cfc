@@ -31,6 +31,8 @@ component {
 		,          struct  fileProperties      = {}
 	) {
 		var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
+		var isGif = ( fileProperties.fileExt ?: "" ) == "gif";
+
 		if ( isSvg ) {
 			arguments.asset = _getSvgToPngService().SVGToPngBinary( arguments.asset, arguments.width, arguments.height );
 			fileProperties.fileExt = "png";
@@ -47,7 +49,7 @@ component {
 		}
 
 		FileCopy( sourceFile, targetFile );
-		if ( imageInfo.requiresOrientation ) {
+		if ( imageInfo.requiresOrientation || isGif ) {
 			targetFile = _autoRotate( targetFile );
 		}
 
@@ -97,6 +99,7 @@ component {
 		,          struct  fileProperties      = {}
 	) {
 		var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
+		var isGif = ( fileProperties.fileExt ?: "" ) == "gif";
 		if ( isSvg ) {
 			arguments.asset = _getSvgToPngService().SVGToPngBinary( arguments.asset, arguments.width, arguments.height );
 			fileProperties.fileExt = "png";
@@ -113,7 +116,7 @@ component {
 		}
 
 		FileCopy( sourceFile, targetFile );
-		if ( imageInfo.requiresOrientation ) {
+		if ( imageInfo.requiresOrientation || isGif ) {
 			targetFile = _autoRotate( targetFile );
 		}
 
@@ -291,7 +294,7 @@ component {
 	}
 
 	private string function _autoRotate( required string targetFile ) {
-		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "crop_" );
+		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "crop_" ).reReplace( "\.gif$", ".png" );
 		try {
 			_exec( "vips", 'autorot "#targetFile#" "#newTargetFile#"' );
 		} finally {
