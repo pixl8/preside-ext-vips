@@ -18,6 +18,12 @@ It is expected that [libvips](https://libvips.github.io/libvips/) be installed o
 apt install libvips libvips-tools libexif12
 ```
 
+Or on MacOS, install with [Homebrew](https://brew.sh/):
+
+```bash
+brew install vips
+```
+
 Once installed, you can configure vips in your `Config.cfc`. **Note:** You only need to do this if you need non-default values. Defaults are shown below:
 
 ```cfc
@@ -26,10 +32,12 @@ function configure() {
 
 	settings.vips.binDir  = "/usr/bin/"; // where vips tools binary files are found
 	settings.vips.timeout = 60;          // longest time to wait for a VIPs operation to complete
-	
+
 	// ...
 }
 ```
+
+(If installing on MacOS via Homebrew, your `binDir` is likely to be `/usr/local/bin/`.)
 
 ## Limitations
 
