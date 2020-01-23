@@ -4,6 +4,12 @@ This extension swaps out the ImageMagick/native lucee implementation of image re
 
 **It requires Preside 10.11 or greater (recommended 10.11.25).**
 
+## Installation
+
+```
+box install preside-ext-vips
+```
+
 ## Pre-requisites and configuration
 
 It is expected that [libvips](https://libvips.github.io/libvips/) be installed on your system, along with `libexif`. For example, on Ubuntu:
