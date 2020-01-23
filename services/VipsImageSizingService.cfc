@@ -250,8 +250,10 @@ component {
 	){
 		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "tn_" );
 		var outputFormat  = "tn_%s.#ListLast( newTargetFile, '.' )#";
+		var size          = "#int( arguments.width )#x#int( arguments.height )#";
+
 		try {
-			_exec( "vipsthumbnail", "-s #arguments.width#x#arguments.height# -d -o #outputFormat# ""#arguments.targetFile#""" );
+			_exec( "vipsthumbnail", "-s #size# -d -o #outputFormat# ""#arguments.targetFile#""" );
 		} finally {
 			_deleteFile( arguments.targetFile );
 		}
