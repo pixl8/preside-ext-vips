@@ -250,8 +250,10 @@ component {
 	){
 		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "tn_" );
 		var outputFormat  = "tn_%s.#ListLast( newTargetFile, '.' )#";
+		var size          = "#Int( arguments.width )#x#Int( arguments.height )#";
+
 		try {
-			_exec( "vipsthumbnail", "-s #arguments.width#x#arguments.height# -d -o #outputFormat# ""#arguments.targetFile#""" );
+			_exec( "vipsthumbnail", "-s #size# -d -o #outputFormat# ""#arguments.targetFile#""" );
 		} finally {
 			_deleteFile( arguments.targetFile );
 		}
@@ -266,7 +268,7 @@ component {
 	) {
 		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "crop_" );
 		try {
-			_exec( "vips", 'crop "#targetFile#" "#newTargetFile#" #cropArea.x# #cropArea.y# #cropArea.width# #cropArea.height#' );
+			_exec( "vips", 'crop "#targetFile#" "#newTargetFile#" #Int( cropArea.x )# #Int( cropArea.y )# #Int( cropArea.width )# #Int( cropArea.height )#' );
 		} finally {
 			_deleteFile( arguments.targetFile );
 		}
