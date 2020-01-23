@@ -1,7 +1,0 @@
-include:
-  - project: "utilities/pixl8-gitlab-pipelines"
-    file: "pixl8-extension.yml"
-
-variables:
-  SLACK_CHANNEL: "team-elf-builds"
-  TEST_DISABLED: "true"
