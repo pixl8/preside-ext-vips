@@ -208,7 +208,7 @@ component {
 	private numeric function _cfToJpegQuality( required string quality ) {
 		switch( arguments.quality ) {
 			case "highestQuality":
-				return 90;
+				return 95;
 
 			case "highQuality":
 			case "mediumPerformance":
