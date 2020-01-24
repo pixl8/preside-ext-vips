@@ -197,6 +197,10 @@ component {
 		return filePath;
 	}
 
+	private number function _int( required numeric value ) {
+		return numberFormat( arguments.value, "0" );
+	}
+
 	private struct function _getFocalPointRectangle(
 		  required string  targetFile
 		, required struct  imageInfo
@@ -206,11 +210,11 @@ component {
 	) {
 		var originX     = 0;
 		var originY     = 0;
-		var cropCentreX = originX + int( arguments.width  / 2 );
-		var cropCentreY = originY + int( arguments.height / 2 );
+		var cropCentreX = originX + _int( arguments.width  / 2 );
+		var cropCentreY = originY + _int( arguments.height / 2 );
 		var focalPoint  = len( arguments.focalPoint ) ? arguments.focalPoint : "0.5,0.5";
-		var focalPointX = int( listFirst( focalPoint ) * imageInfo.width  );
-		var focalPointY = int( listLast(  focalPoint ) * imageInfo.height );
+		var focalPointX = _int( listFirst( focalPoint ) * imageInfo.width  );
+		var focalPointY = _int( listLast(  focalPoint ) * imageInfo.height );
 
 		if ( focalPointX > cropCentreX ) {
 			originX = min( originX + ( focalPointX - cropCentreX ), imageInfo.width - arguments.width );
@@ -250,10 +254,10 @@ component {
 	){
 		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "tn_" );
 		var outputFormat  = "tn_%s.#ListLast( newTargetFile, '.' )#";
-		var size          = "#Int( arguments.width )#x#Int( arguments.height )#";
+		var size          = "#_int( arguments.width )#x#_int( arguments.height )#";
 
 		try {
-			_exec( "vipsthumbnail", "-s #size# -d -o #outputFormat# ""#arguments.targetFile#""" );
+			_exec( "vipsthumbnail", """#arguments.targetFile#"" -s #size# -d -o #outputFormat#" );
 		} finally {
 			_deleteFile( arguments.targetFile );
 		}
@@ -268,7 +272,7 @@ component {
 	) {
 		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "crop_" );
 		try {
-			_exec( "vips", 'crop "#targetFile#" "#newTargetFile#" #Int( cropArea.x )# #Int( cropArea.y )# #Int( cropArea.width )# #Int( cropArea.height )#' );
+			_exec( "vips", 'crop "#targetFile#" "#newTargetFile#" #_int( cropArea.x )# #_int( cropArea.y )# #_int( cropArea.width )# #_int( cropArea.height )#' );
 		} finally {
 			_deleteFile( arguments.targetFile );
 		}
