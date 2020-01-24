@@ -24,6 +24,7 @@ component {
 		  required binary  asset
 		,          numeric width               = 0
 		,          numeric height              = 0
+		,          string  quality             = "highPerformance"
 		,          boolean maintainAspectRatio = false
 		,          string  focalPoint          = ""
 		,          struct  cropHintArea        = {}
@@ -40,9 +41,10 @@ component {
 			return arguments.asset;
 		}
 
-		var sourceFile = _tmpFile( arguments.asset );
-		var targetFile = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
-		var imageInfo  = getImageInformation( filePath=sourceFile );
+		var sourceFile  = _tmpFile( arguments.asset );
+		var targetFile  = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
+		var imageInfo   = getImageInformation( filePath=sourceFile );
+		var jpegQuality = _cfToJpegQuality( arguments.quality );
 
 		if ( imageInfo.width == arguments.width && imageInfo.height == arguments.height ) {
 			return arguments.asset;
@@ -50,18 +52,18 @@ component {
 
 		FileCopy( sourceFile, targetFile );
 		if ( imageInfo.requiresOrientation || isGif ) {
-			targetFile = _autoRotate( targetFile );
+			targetFile = _autoRotate( targetFile, jpegQuality );
 		}
 
 		if ( !arguments.height ) {
-			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0 );
+			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0, jpegQuality );
 		} else if ( !arguments.width ) {
-			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height );
+			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, jpegQuality );
 		} else {
 			var requiresResize = true;
 
 			if ( arguments.useCropHint && !arguments.cropHintArea.isEmpty() ) {
-				targetFile = _crop( targetFile, imageInfo, arguments.cropHintArea );
+				targetFile = _crop( targetFile, imageInfo, arguments.cropHintArea, jpegQuality );
 				imageInfo = getImageInformation( filePath=targetFile );
 			} else {
 				if ( maintainAspectRatio ) {
@@ -70,20 +72,20 @@ component {
 
 					if ( targetAspectRatio != currentAspectRatio ) {
 						if ( currentAspectRatio > targetAspectRatio ) {
-							targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height );
+							targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, jpegQuality );
 						} else {
-							targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0 );
+							targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0, jpegQuality );
 						}
 
 						imageInfo = getImageInformation( filePath=targetFile );
-						targetFile = _cropToFocalPoint( argumentCollection=arguments, targetFile=targetFile, imageInfo=imageInfo );
+						targetFile = _cropToFocalPoint( argumentCollection=arguments, targetFile=targetFile, imageInfo=imageInfo, jpegQuality=jpegQuality );
 						requiresResize = false;
 					}
 				}
 			}
 
 			if ( requiresResize ) {
-				targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height );
+				targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height, jpegQuality );
 			}
 		}
 
@@ -96,7 +98,8 @@ component {
 		  required binary  asset
 		, required numeric width
 		, required numeric height
-		,          struct  fileProperties      = {}
+		,          string  quality        = "highPerformance"
+		,          struct  fileProperties = {}
 	) {
 		var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
 		var isGif = ( fileProperties.fileExt ?: "" ) == "gif";
@@ -107,9 +110,10 @@ component {
 			return arguments.asset;
 		}
 
-		var sourceFile = _tmpFile( arguments.asset );
-		var targetFile = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
-		var imageInfo  = getImageInformation( filePath=sourceFile );
+		var sourceFile  = _tmpFile( arguments.asset );
+		var targetFile  = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
+		var imageInfo   = getImageInformation( filePath=sourceFile );
+		var jpegQuality = _cfToJpegQuality( arguments.quality );
 
 		if ( imageInfo.width <= arguments.width && imageInfo.height <= arguments.height ) {
 			return arguments.asset;
@@ -117,26 +121,26 @@ component {
 
 		FileCopy( sourceFile, targetFile );
 		if ( imageInfo.requiresOrientation || isGif ) {
-			targetFile = _autoRotate( targetFile );
+			targetFile = _autoRotate( targetFile, jpegQuality );
 		}
 
 		var currentAspectRatio = imageInfo.width / imageInfo.height;
 		var targetAspectRatio  = arguments.width / arguments.height;
 
 		if ( targetAspectRatio == currentAspectRatio ) {
-			targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height );
+			targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height, jpegQuality );
 		} else if ( currentAspectRatio > targetAspectRatio ) {
-			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height );
+			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, jpegQuality );
 		} else {
-			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0 );
+			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0, jpegQuality );
 		}
 
 		imageInfo = getImageInformation( filePath=targetFile );
 
 		if ( imageInfo.width > arguments.width ) {
-			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0 );
+			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0, jpegQuality );
 		} else if ( imageInfo.height > arguments.height ){
-			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height );
+			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, jpegQuality );
 		}
 
 		var binary = FileReadBinary( targetFile );
@@ -201,6 +205,26 @@ component {
 		return numberFormat( arguments.value, "0" );
 	}
 
+	private numeric function _cfToJpegQuality( required string quality ) {
+		switch( arguments.quality ) {
+			case "highestQuality":
+				return 90;
+
+			case "highQuality":
+			case "mediumPerformance":
+				return 85;
+
+			case "mediumQuality":
+			case "highPerformance":
+				return 80;
+
+			case "highestPerformance":
+				return 75;
+		}
+
+		return 80;
+	}
+
 	private struct function _getFocalPointRectangle(
 		  required string  targetFile
 		, required struct  imageInfo
@@ -236,6 +260,7 @@ component {
 		, required struct  imageInfo
 		, required numeric width
 		, required numeric height
+		,          numeric jpegQuality = 75
 	) {
 		if ( !arguments.height ) {
 			arguments.height = imageInfo.height * ( arguments.width / imageInfo.width );
@@ -251,13 +276,14 @@ component {
 		, required struct  imageInfo
 		, required numeric width
 		, required numeric height
+		,          numeric jpegQuality = 75
 	){
 		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "tn_" );
 		var outputFormat  = "tn_%s.#ListLast( newTargetFile, '.' )#";
 		var size          = "#_int( arguments.width )#x#_int( arguments.height )#";
 
 		try {
-			_exec( "vipsthumbnail", """#arguments.targetFile#"" -s #size# -d -o ""#outputFormat#[Q=75,optimize-coding,strip]""" );
+			_exec( "vipsthumbnail", """#arguments.targetFile#"" -s #size# -d -o ""#outputFormat#[Q=#arguments.jpegQuality#,optimize-coding,strip]""" );
 		} finally {
 			_deleteFile( arguments.targetFile );
 		}
@@ -269,10 +295,11 @@ component {
 		  required string  targetFile
 		, required struct  imageInfo
 		, required struct  cropArea
+		,          numeric jpegQuality = 75
 	) {
 		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "crop_" );
 		try {
-			_exec( "vips", 'crop "#targetFile#" "#newTargetFile#" #_int( cropArea.x )# #_int( cropArea.y )# #_int( cropArea.width )# #_int( cropArea.height )#' );
+			_exec( "vips", 'crop "#targetFile#" """#newTargetFile#[Q=#arguments.jpegQuality#,optimize-coding,strip]""" #_int( cropArea.x )# #_int( cropArea.y )# #_int( cropArea.width )# #_int( cropArea.height )#' );
 		} finally {
 			_deleteFile( arguments.targetFile );
 		}
@@ -286,6 +313,7 @@ component {
 		, required numeric width
 		, required numeric height
 		, required string  focalPoint
+		,          numeric jpegQuality = 75
 	) {
 		var rectangle = _getFocalPointRectangle( argumentCollection=arguments );
 
@@ -296,13 +324,16 @@ component {
 			return targetFile;
 		}
 
-		return _crop( targetFile, imageInfo, rectangle );
+		return _crop( targetFile, imageInfo, rectangle, jpegQuality );
 	}
 
-	private string function _autoRotate( required string targetFile ) {
+	private string function _autoRotate(
+		  required string  targetFile
+		,          numeric jpegQuality = 75
+	) {
 		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "crop_" ).reReplace( "\.gif$", ".png" );
 		try {
-			_exec( "vips", 'autorot "#targetFile#" "#newTargetFile#"' );
+			_exec( "vips", 'autorot "#targetFile#" """#newTargetFile#[Q=#arguments.jpegQuality#]"""' );
 		} finally {
 			_deleteFile( arguments.targetFile );
 		}
