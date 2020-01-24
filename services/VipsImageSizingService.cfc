@@ -257,7 +257,7 @@ component {
 		var size          = "#_int( arguments.width )#x#_int( arguments.height )#";
 
 		try {
-			_exec( "vipsthumbnail", """#arguments.targetFile#"" -s #size# -d -o #outputFormat#" );
+			_exec( "vipsthumbnail", """#arguments.targetFile#"" -s #size# -d -o ""#outputFormat#[Q=75,optimize-coding,strip]""" );
 		} finally {
 			_deleteFile( arguments.targetFile );
 		}
