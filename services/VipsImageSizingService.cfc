@@ -29,6 +29,7 @@ component {
 		,          string  focalPoint          = ""
 		,          struct  cropHintArea        = {}
 		,          boolean useCropHint         = false
+		,          string  outputFormat        = ""
 		,          struct  fileProperties      = {}
 	) {
 		var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
@@ -39,6 +40,10 @@ component {
 			fileProperties.fileExt = "png";
 
 			return arguments.asset;
+		}
+
+		if ( len( arguments.outputFormat ) ) {
+			fileProperties.fileExt = arguments.outputFormat;
 		}
 
 		var sourceFile  = _tmpFile( arguments.asset );
@@ -99,6 +104,7 @@ component {
 		, required numeric width
 		, required numeric height
 		,          string  quality        = "highPerformance"
+		,          string  outputFormat   = ""
 		,          struct  fileProperties = {}
 	) {
 		var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
@@ -108,6 +114,10 @@ component {
 			fileProperties.fileExt = "png";
 
 			return arguments.asset;
+		}
+
+		if ( len( arguments.outputFormat ) ) {
+			fileProperties.fileExt = arguments.outputFormat;
 		}
 
 		var sourceFile  = _tmpFile( arguments.asset );
