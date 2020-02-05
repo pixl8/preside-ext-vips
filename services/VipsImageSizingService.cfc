@@ -6,12 +6,10 @@ component {
 
 // CONSTRUCTOR
 	/**
-	 * @svgToPngService.inject svgToPngService
 	 * @vipsSettings.inject    coldbox:setting:vips
 	 *
 	 */
-	public any function init( required any svgToPngService, required struct vipsSettings ) {
-		_setSvgToPngService( arguments.svgToPngService );
+	public any function init( required struct vipsSettings ) {
 		_setBinDir( arguments.vipsSettings.binDir ?: "/usr/bin" );
 		_setTimeout( Val( arguments.vipsSettings.timeout ?: 60 ) );
 		_setVipsTmpDirectory( GetTempDirectory() & "/vips/" );
@@ -27,26 +25,30 @@ component {
 		,          string  quality             = "highPerformance"
 		,          boolean maintainAspectRatio = false
 		,          string  focalPoint          = ""
+		,          boolean autoFocalPoint      = false
 		,          struct  cropHintArea        = {}
 		,          boolean useCropHint         = false
+		,          string  outputFormat        = ""
 		,          struct  fileProperties      = {}
 	) {
-		var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
-		var isGif = ( fileProperties.fileExt ?: "" ) == "gif";
+		var originalFileExt = fileProperties.fileExt ?: "";
+		var isSvg           = originalFileExt == "svg";
+		var isGif           = originalFileExt == "gif";
 
 		if ( isSvg ) {
-			arguments.asset = _getSvgToPngService().SVGToPngBinary( arguments.asset, arguments.width, arguments.height );
 			fileProperties.fileExt = "png";
-
-			return arguments.asset;
+		}
+		if ( len( arguments.outputFormat ) ) {
+			fileProperties.fileExt = arguments.outputFormat;
 		}
 
-		var sourceFile  = _tmpFile( arguments.asset );
-		var targetFile  = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
-		var imageInfo   = getImageInformation( filePath=sourceFile );
-		var vipsQuality = _cfToVipsQuality( arguments.quality, fileProperties.fileExt ?: "" );
+		var sourceFile         = _tmpFile( arguments.asset );
+		var targetFile         = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
+		var imageInfo          = getImageInformation( filePath=sourceFile );
+		var vipsQuality        = _cfToVipsQuality( arguments.quality, fileProperties.fileExt ?: "" );
+		var requiresConversion = ( fileProperties.fileExt ?: "" ) != originalFileExt;
 
-		if ( imageInfo.width == arguments.width && imageInfo.height == arguments.height ) {
+		if ( imageInfo.width == arguments.width && imageInfo.height == arguments.height && !requiresConversion ) {
 			return arguments.asset;
 		}
 
@@ -60,17 +62,19 @@ component {
 		} else if ( !arguments.width ) {
 			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, vipsQuality );
 		} else {
-			var requiresResize = true;
+			var requiresResize    = true;
+			var useAutoFocalPoint = false;
 
 			if ( arguments.useCropHint && !arguments.cropHintArea.isEmpty() ) {
 				targetFile = _crop( targetFile, imageInfo, arguments.cropHintArea, vipsQuality );
-				imageInfo = getImageInformation( filePath=targetFile );
+				imageInfo  = getImageInformation( filePath=targetFile );
 			} else {
 				if ( maintainAspectRatio ) {
 					var currentAspectRatio = imageInfo.width / imageInfo.height;
 					var targetAspectRatio  = arguments.width / arguments.height;
+					useAutoFocalPoint      = arguments.autoFocalPoint && !len( arguments.focalPoint );
 
-					if ( targetAspectRatio != currentAspectRatio ) {
+					if ( targetAspectRatio != currentAspectRatio && !useAutoFocalPoint ) {
 						if ( currentAspectRatio > targetAspectRatio ) {
 							targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, vipsQuality );
 						} else {
@@ -85,7 +89,7 @@ component {
 			}
 
 			if ( requiresResize ) {
-				targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height, vipsQuality );
+				targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height, vipsQuality, useAutoFocalPoint );
 			}
 		}
 
@@ -99,48 +103,58 @@ component {
 		, required numeric width
 		, required numeric height
 		,          string  quality        = "highPerformance"
+		,          string  outputFormat   = ""
 		,          struct  fileProperties = {}
 	) {
-		var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
-		var isGif = ( fileProperties.fileExt ?: "" ) == "gif";
-		if ( isSvg ) {
-			arguments.asset = _getSvgToPngService().SVGToPngBinary( arguments.asset, arguments.width, arguments.height );
-			fileProperties.fileExt = "png";
+		var originalFileExt = fileProperties.fileExt ?: "";
+		var isSvg           = originalFileExt == "svg";
+		var isGif           = originalFileExt == "gif";
 
-			return arguments.asset;
+		if ( isSvg ) {
+			fileProperties.fileExt = "png";
+		}
+		if ( len( arguments.outputFormat ) ) {
+			fileProperties.fileExt = arguments.outputFormat;
 		}
 
-		var sourceFile  = _tmpFile( arguments.asset );
-		var targetFile  = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
-		var imageInfo   = getImageInformation( filePath=sourceFile );
-		var vipsQuality = _cfToVipsQuality( arguments.quality, fileProperties.fileExt ?: "" );
+		var sourceFile         = _tmpFile( arguments.asset );
+		var targetFile         = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
+		var imageInfo          = getImageInformation( filePath=sourceFile );
+		var vipsQuality        = _cfToVipsQuality( arguments.quality, fileProperties.fileExt ?: "" );
+		var requiresConversion = ( fileProperties.fileExt ?: "" ) != originalFileExt;
 
-		if ( imageInfo.width <= arguments.width && imageInfo.height <= arguments.height ) {
+		if ( imageInfo.width <= arguments.width && imageInfo.height <= arguments.height && !requiresConversion ) {
 			return arguments.asset;
 		}
 
 		FileCopy( sourceFile, targetFile );
 		if ( imageInfo.requiresOrientation || isGif ) {
 			targetFile = _autoRotate( targetFile, vipsQuality );
+			imageInfo  = getImageInformation( filePath=targetFile );
 		}
 
 		var currentAspectRatio = imageInfo.width / imageInfo.height;
 		var targetAspectRatio  = arguments.width / arguments.height;
+		var requiresShrinking  = imageInfo.width > arguments.width || imageInfo.height > arguments.height;
 
-		if ( targetAspectRatio == currentAspectRatio ) {
-			targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height, vipsQuality );
-		} else if ( currentAspectRatio > targetAspectRatio ) {
-			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, vipsQuality );
-		} else {
-			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0, vipsQuality );
-		}
+		if ( requiresShrinking ) {
+			if ( targetAspectRatio == currentAspectRatio ) {
+				targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height, vipsQuality );
+			} else if ( currentAspectRatio > targetAspectRatio ) {
+				targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, vipsQuality );
+			} else {
+				targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0, vipsQuality );
+			}
 
-		imageInfo = getImageInformation( filePath=targetFile );
+			imageInfo = getImageInformation( filePath=targetFile );
 
-		if ( imageInfo.width > arguments.width ) {
-			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0, vipsQuality );
-		} else if ( imageInfo.height > arguments.height ){
-			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, vipsQuality );
+			if ( imageInfo.width > arguments.width ) {
+				targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0, vipsQuality );
+			} else if ( imageInfo.height > arguments.height ){
+				targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, vipsQuality );
+			}
+		} else if ( requiresConversion ) {
+			targetFile = _thumbnail( targetFile, imageInfo, imageInfo.width, imageInfo.height, vipsQuality );
 		}
 
 		var binary = FileReadBinary( targetFile );
@@ -177,6 +191,74 @@ component {
 		}
 
 		throw( type="AssetTransformer.shrinkToFit.notAnImage" );
+	}
+
+	public struct function getCropHintArea(
+		  required binary  image
+		, required numeric width
+		, required numeric height
+		, required string  cropHint
+	) {
+		var imageInfo      = getImageInformation( arguments.image );
+		var targetWidth    = arguments.width;
+		var targetHeight   = arguments.height;
+		var targetRatio    = targetWidth / targetHeight;
+		var cropHintCoords = arguments.cropHint.listToArray();
+		var cropX          = int( cropHintCoords[ 1 ] * imageInfo.width );
+		var cropY          = int( cropHintCoords[ 2 ] * imageInfo.height );
+		var cropWidth      = int( cropHintCoords[ 3 ] * imageInfo.width );
+		var cropHeight     = int( cropHintCoords[ 4 ] * imageInfo.height );
+		var cropHintRatio  = cropWidth / cropHeight;
+		var prevCropWidth  = 0;
+		var prevCropHeight = 0;
+		var widthRatio     = 0;
+		var heightRatio    = 0;
+
+		if ( cropHintRatio > targetRatio ) {
+			prevCropHeight = cropHeight;
+			cropHeight     = int( cropHeight * ( cropHintRatio / targetRatio ) );
+			cropY          = int( cropY - ( ( cropHeight - prevCropHeight ) / 2 ) );
+		} else if ( cropHintRatio < targetRatio ) {
+			prevCropWidth = cropWidth;
+			cropWidth     = int( cropWidth * ( targetRatio / cropHintRatio ) );
+			cropX         = int( cropX - ( ( cropWidth - prevCropWidth ) / 2 ) );
+		}
+
+		if ( targetWidth > cropWidth ) {
+			prevCropWidth  = cropWidth;
+			widthRatio     = targetWidth / cropWidth;
+			cropWidth      = int( cropWidth  * widthRatio );
+			cropX          = int( cropX - ( ( cropWidth  - prevCropWidth ) / 2 ) );
+		}
+		if ( targetHeight > cropHeight ) {
+			prevCropHeight = cropHeight;
+			heightRatio    = targetHeight / cropHeight;
+			cropHeight     = int( cropHeight * heightRatio );
+			cropY          = int( cropY - ( ( cropHeight - prevCropHeight ) / 2 ) );
+		}
+
+
+		if ( cropWidth > imageInfo.width || cropHeight > imageInfo.height ) {
+			var fitRatio   = min( imageInfo.width / cropWidth, imageInfo.height / cropHeight );
+			prevCropWidth  = cropWidth;
+			prevCropHeight = cropHeight;
+			cropWidth      = int( cropWidth  * fitRatio );
+			cropX          = int( cropX - ( ( cropWidth  - prevCropWidth ) / 2 ) );
+			cropHeight     = int( cropHeight * fitRatio );
+			cropY          = int( cropY - ( ( cropHeight - prevCropHeight ) / 2 ) );
+		}
+
+		cropX = max( cropX, 0 );
+		cropY = max( cropY, 0 );
+		cropX = min( cropX, imageInfo.width - cropWidth );
+		cropY = min( cropY, imageInfo.height - cropHeight );
+
+		return {
+			  x      = cropX
+			, y      = cropY
+			, width  = cropWidth
+			, height = cropHeight
+		}
 	}
 
 // PRIVATE HELPERS
@@ -299,13 +381,15 @@ component {
 		, required numeric width
 		, required numeric height
 		, required string  vipsQuality
+		,          boolean smartcrop = false
 	){
 		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "tn_" );
 		var outputFormat  = "tn_%s.#ListLast( newTargetFile, '.' )#";
 		var size          = "#_int( arguments.width )#x#_int( arguments.height )#";
+		var smartcrop     = arguments.smartcrop ? "--smartcrop attention" : "";
 
 		try {
-			_exec( "vipsthumbnail", """#arguments.targetFile#"" -s #size# -d -o ""#outputFormat#[#arguments.vipsQuality#,strip]""" );
+			_exec( "vipsthumbnail", """#arguments.targetFile#"" -s #size# #smartcrop# -d -o ""#outputFormat#[#arguments.vipsQuality#,strip]""" );
 		} finally {
 			_deleteFile( arguments.targetFile );
 		}
@@ -335,8 +419,12 @@ component {
 		, required numeric width
 		, required numeric height
 		, required string  focalPoint
+		, required boolean autoFocalPoint
 		, required string  vipsQuality
 	) {
+		if ( autoFocalPoint && !len( focalPoint ) ) {
+			return targetFile;
+		}
 		var rectangle = _getFocalPointRectangle( argumentCollection=arguments );
 
 		if ( rectangle.x < 0 || ( rectangle.x + rectangle.width ) > imageInfo.width ) {
@@ -377,13 +465,6 @@ component {
 	}
 
 // GETTERS AND SETTERS
-	private any function _getSvgToPngService() {
-		return _svgToPngService;
-	}
-	private void function _setSvgToPngService( required any svgToPngService ) {
-		_svgToPngService = arguments.svgToPngService;
-	}
-
 	private string function _getVipsTmpDirectory() {
 		return _vipsTmpDirectory;
 	}

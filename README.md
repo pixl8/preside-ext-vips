@@ -39,6 +39,26 @@ function configure() {
 
 (If installing on MacOS via Homebrew, your `binDir` is likely to be `/usr/local/bin/`.)
 
+## Additional features
+
+There are a couple of additional features that are available to your derivatives when using the VIPS extension.
+
+### outputFormat
+
+Normally, an image will be output in the same format as the original (unless the original image is an SVG file, in which case a PNG will be generated).
+
+By adding the `outputFormat` argument to a derivative, you can specify which format the resulting image should be in. This is especially useful for a modern format such as WebP. You could specify `outputFormat="webp"` and the resulting images would be generated in the WebP format.
+
+(Note that you would want to implement these images as _alternate_ sources using the `<picture>` element, as not all browsers support WebP).
+
+Related to this, `.webp` is added to Preside's known image formats by the VIPS extension.
+
+### autoFocalPoint
+
+You already have the ability to specify the focal point of an image manually. However, if you set `autoFocalPoint=true` on your derivative, then VIPS will make a smart guess at where the centre of attention of the image is. This would be especially useful for portraits, where you might want to automatically crop to a person's face.
+
+Of course, if you manually set the focal point, then that will be used in preference - there may be occasions where the algorithm doesn't pick out the focal point you desire.
+
 ## Limitations
 
 * We have not yet implemented the conversion of pages of PDFs into jpgs. We leave the PDF Preview transformation to ImageMagick/native Lucee implementation.

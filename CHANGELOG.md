@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.4
+
+* [#7](https://github.com/pixl8/preside-ext-vips/issues/7) Use VIPS for SVG-to-PNG conversion
+* [#8](https://github.com/pixl8/preside-ext-vips/issues/8) Allow derivatives to specify an output format
+* [#9](https://github.com/pixl8/preside-ext-vips/issues/9) Add .webp as a recognized image format
+* [#10](https://github.com/pixl8/preside-ext-vips/issues/10) Add automatic focal point detection
+* [#11](https://github.com/pixl8/preside-ext-vips/issues/11) Fix crop hints being ignored by the VIPS processor
+
 ## v1.0.3
 
 * [#3](https://github.com/pixl8/preside-ext-vips/issues/3) Fix further rounding issues (workaround Lucee 5 bug)
