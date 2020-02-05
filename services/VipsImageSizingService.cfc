@@ -25,6 +25,7 @@ component {
 		,          string  quality             = "highPerformance"
 		,          boolean maintainAspectRatio = false
 		,          string  focalPoint          = ""
+		,          boolean autoFocalPoint      = false
 		,          struct  cropHintArea        = {}
 		,          boolean useCropHint         = false
 		,          string  outputFormat        = ""
@@ -61,17 +62,19 @@ component {
 		} else if ( !arguments.width ) {
 			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, vipsQuality );
 		} else {
-			var requiresResize = true;
+			var requiresResize    = true;
+			var useAutoFocalPoint = false;
 
 			if ( arguments.useCropHint && !arguments.cropHintArea.isEmpty() ) {
 				targetFile = _crop( targetFile, imageInfo, arguments.cropHintArea, vipsQuality );
-				imageInfo = getImageInformation( filePath=targetFile );
+				imageInfo  = getImageInformation( filePath=targetFile );
 			} else {
 				if ( maintainAspectRatio ) {
 					var currentAspectRatio = imageInfo.width / imageInfo.height;
 					var targetAspectRatio  = arguments.width / arguments.height;
+					useAutoFocalPoint      = arguments.autoFocalPoint && !len( arguments.focalPoint );
 
-					if ( targetAspectRatio != currentAspectRatio ) {
+					if ( targetAspectRatio != currentAspectRatio && !useAutoFocalPoint ) {
 						if ( currentAspectRatio > targetAspectRatio ) {
 							targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, vipsQuality );
 						} else {
@@ -86,7 +89,7 @@ component {
 			}
 
 			if ( requiresResize ) {
-				targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height, vipsQuality );
+				targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height, vipsQuality, useAutoFocalPoint );
 			}
 		}
 
@@ -310,13 +313,15 @@ component {
 		, required numeric width
 		, required numeric height
 		, required string  vipsQuality
+		,          boolean smartcrop = false
 	){
 		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "tn_" );
 		var outputFormat  = "tn_%s.#ListLast( newTargetFile, '.' )#";
 		var size          = "#_int( arguments.width )#x#_int( arguments.height )#";
+		var smartcrop     = arguments.smartcrop ? "--smartcrop attention" : "";
 
 		try {
-			_exec( "vipsthumbnail", """#arguments.targetFile#"" -s #size# -d -o ""#outputFormat#[#arguments.vipsQuality#,strip]""" );
+			_exec( "vipsthumbnail", """#arguments.targetFile#"" -s #size# #smartcrop# -d -o ""#outputFormat#[#arguments.vipsQuality#,strip]""" );
 		} finally {
 			_deleteFile( arguments.targetFile );
 		}
@@ -346,8 +351,12 @@ component {
 		, required numeric width
 		, required numeric height
 		, required string  focalPoint
+		, required boolean autoFocalPoint
 		, required string  vipsQuality
 	) {
+		if ( autoFocalPoint && !len( focalPoint ) ) {
+			return targetFile;
+		}
 		var rectangle = _getFocalPointRectangle( argumentCollection=arguments );
 
 		if ( rectangle.x < 0 || ( rectangle.x + rectangle.width ) > imageInfo.width ) {
