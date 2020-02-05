@@ -30,23 +30,24 @@ component {
 		,          string  outputFormat        = ""
 		,          struct  fileProperties      = {}
 	) {
-		var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
-		var isGif = ( fileProperties.fileExt ?: "" ) == "gif";
+		var originalFileExt = fileProperties.fileExt ?: "";
+		var isSvg           = originalFileExt == "svg";
+		var isGif           = originalFileExt == "gif";
 
 		if ( isSvg ) {
 			fileProperties.fileExt = "png";
 		}
-
 		if ( len( arguments.outputFormat ) ) {
 			fileProperties.fileExt = arguments.outputFormat;
 		}
 
-		var sourceFile  = _tmpFile( arguments.asset );
-		var targetFile  = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
-		var imageInfo   = getImageInformation( filePath=sourceFile );
-		var vipsQuality = _cfToVipsQuality( arguments.quality, fileProperties.fileExt ?: "" );
+		var sourceFile         = _tmpFile( arguments.asset );
+		var targetFile         = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
+		var imageInfo          = getImageInformation( filePath=sourceFile );
+		var vipsQuality        = _cfToVipsQuality( arguments.quality, fileProperties.fileExt ?: "" );
+		var requiresConversion = ( fileProperties.fileExt ?: "" ) != originalFileExt;
 
-		if ( imageInfo.width == arguments.width && imageInfo.height == arguments.height ) {
+		if ( imageInfo.width == arguments.width && imageInfo.height == arguments.height && !requiresConversion ) {
 			return arguments.asset;
 		}
 
@@ -102,47 +103,55 @@ component {
 		,          string  outputFormat   = ""
 		,          struct  fileProperties = {}
 	) {
-		var isSvg = ( fileProperties.fileExt ?: "" ) == "svg";
-		var isGif = ( fileProperties.fileExt ?: "" ) == "gif";
+		var originalFileExt = fileProperties.fileExt ?: "";
+		var isSvg           = originalFileExt == "svg";
+		var isGif           = originalFileExt == "gif";
+
 		if ( isSvg ) {
 			fileProperties.fileExt = "png";
 		}
-
 		if ( len( arguments.outputFormat ) ) {
 			fileProperties.fileExt = arguments.outputFormat;
 		}
 
-		var sourceFile  = _tmpFile( arguments.asset );
-		var targetFile  = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
-		var imageInfo   = getImageInformation( filePath=sourceFile );
-		var vipsQuality = _cfToVipsQuality( arguments.quality, fileProperties.fileExt ?: "" );
+		var sourceFile         = _tmpFile( arguments.asset );
+		var targetFile         = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
+		var imageInfo          = getImageInformation( filePath=sourceFile );
+		var vipsQuality        = _cfToVipsQuality( arguments.quality, fileProperties.fileExt ?: "" );
+		var requiresConversion = ( fileProperties.fileExt ?: "" ) != originalFileExt;
 
-		if ( imageInfo.width <= arguments.width && imageInfo.height <= arguments.height ) {
+		if ( imageInfo.width <= arguments.width && imageInfo.height <= arguments.height && !requiresConversion ) {
 			return arguments.asset;
 		}
 
 		FileCopy( sourceFile, targetFile );
 		if ( imageInfo.requiresOrientation || isGif ) {
 			targetFile = _autoRotate( targetFile, vipsQuality );
+			imageInfo  = getImageInformation( filePath=targetFile );
 		}
 
 		var currentAspectRatio = imageInfo.width / imageInfo.height;
 		var targetAspectRatio  = arguments.width / arguments.height;
+		var requiresShrinking  = imageInfo.width > arguments.width || imageInfo.height > arguments.height;
 
-		if ( targetAspectRatio == currentAspectRatio ) {
-			targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height, vipsQuality );
-		} else if ( currentAspectRatio > targetAspectRatio ) {
-			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, vipsQuality );
-		} else {
-			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0, vipsQuality );
-		}
+		if ( requiresShrinking ) {
+			if ( targetAspectRatio == currentAspectRatio ) {
+				targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height, vipsQuality );
+			} else if ( currentAspectRatio > targetAspectRatio ) {
+				targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, vipsQuality );
+			} else {
+				targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0, vipsQuality );
+			}
 
-		imageInfo = getImageInformation( filePath=targetFile );
+			imageInfo = getImageInformation( filePath=targetFile );
 
-		if ( imageInfo.width > arguments.width ) {
-			targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0, vipsQuality );
-		} else if ( imageInfo.height > arguments.height ){
-			targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, vipsQuality );
+			if ( imageInfo.width > arguments.width ) {
+				targetFile = _scaleToFit( targetFile, imageInfo, arguments.width, 0, vipsQuality );
+			} else if ( imageInfo.height > arguments.height ){
+				targetFile = _scaleToFit( targetFile, imageInfo, 0, arguments.height, vipsQuality );
+			}
+		} else if ( requiresConversion ) {
+			targetFile = _thumbnail( targetFile, imageInfo, imageInfo.width, imageInfo.height, vipsQuality );
 		}
 
 		var binary = FileReadBinary( targetFile );
