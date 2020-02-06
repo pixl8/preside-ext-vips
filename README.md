@@ -15,7 +15,7 @@ box install preside-ext-vips
 It is expected that [libvips](https://libvips.github.io/libvips/) be installed on your system, along with `libexif`. For example, on Ubuntu:
 
 ```bash
-apt install libvips libvips-tools libexif12
+apt install libvips-tools --no-install-recommends
 ```
 
 Or on MacOS, install with [Homebrew](https://brew.sh/):
