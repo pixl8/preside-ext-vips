@@ -39,6 +39,15 @@ function configure() {
 
 (If installing on MacOS via Homebrew, your `binDir` is likely to be `/usr/local/bin/`.)
 
+You can also configure vips [using environment variables](https://docs.preside.org/devguides/config.html#injecting-environment-variables) (via your server or in a `.env` file at your app's root). *This is the method we would advise if you have a codebase shared with developers on different platforms!*
+
+```
+VIPS_BINDIR=/usr/bin/
+VIPS_TIMEOUT=60
+```
+
+Note, however, that values set in `Config.cfc` will always take precedence.
+
 ## Additional features
 
 There are a couple of additional features that are available to your derivatives when using the VIPS extension.
