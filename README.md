@@ -39,6 +39,20 @@ function configure() {
 
 (If installing on MacOS via Homebrew, your `binDir` is likely to be `/usr/local/bin/`.)
 
+### Environment variables
+
+You can also configure vips [using environment variables](https://docs.preside.org/devguides/config.html#injecting-environment-variables), and this is in fact *the method we would recommend*, both for dev and live environments.
+
+In a `.env` file for your site, tyou could set:
+
+```
+VIPS_BINDIR=/usr/bin/
+VIPS_TIMEOUT=60
+```
+
+And by setting `PRESIDE_VIPS_BINDIR` or `PRESIDE_VIPS_TIMEOUT` as environment variables on a local dev environment, those values will be picked up by every Preside site running under CommandBox - no further configuration required!
+
+
 ## Additional features
 
 There are a couple of additional features that are available to your derivatives when using the VIPS extension.
