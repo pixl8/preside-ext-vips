@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.5
+
+* [#13](https://github.com/pixl8/preside-ext-vips/issues/13) Configure VIPS using environment variables
+* [#14](https://github.com/pixl8/preside-ext-vips/issues/14) Update Ubuntu install instructions
+
 ## v1.0.4
 
 * [#7](https://github.com/pixl8/preside-ext-vips/issues/7) Use VIPS for SVG-to-PNG conversion

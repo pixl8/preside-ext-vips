@@ -15,7 +15,7 @@ box install preside-ext-vips
 It is expected that [libvips](https://libvips.github.io/libvips/) be installed on your system, along with `libexif`. For example, on Ubuntu:
 
 ```bash
-apt install libvips libvips-tools libexif12
+apt install libvips-tools --no-install-recommends
 ```
 
 Or on MacOS, install with [Homebrew](https://brew.sh/):
@@ -38,6 +38,20 @@ function configure() {
 ```
 
 (If installing on MacOS via Homebrew, your `binDir` is likely to be `/usr/local/bin/`.)
+
+### Environment variables
+
+You can also configure vips [using environment variables](https://docs.preside.org/devguides/config.html#injecting-environment-variables), and this is in fact *the method we would recommend*, both for dev and live environments.
+
+In a `.env` file for your site, tyou could set:
+
+```
+VIPS_BINDIR=/usr/bin/
+VIPS_TIMEOUT=60
+```
+
+And by setting `PRESIDE_VIPS_BINDIR` or `PRESIDE_VIPS_TIMEOUT` as environment variables on a local dev environment, those values will be picked up by every Preside site running under CommandBox - no further configuration required!
+
 
 ## Additional features
 
