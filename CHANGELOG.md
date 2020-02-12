@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.6
+
+* [#17](https://github.com/pixl8/preside-ext-vips/issues/17)  AutoFocalPoint fails on older versions of libvips
+
 ## v1.0.5
 
 * [#13](https://github.com/pixl8/preside-ext-vips/issues/13) Configure VIPS using environment variables
