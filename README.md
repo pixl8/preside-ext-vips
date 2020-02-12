@@ -69,6 +69,8 @@ Related to this, `.webp` is added to Preside's known image formats by the VIPS e
 
 ### autoFocalPoint
 
+**Note: this is only available if your version of `libvips` is `8.5.0` or above. Some Linux distributions may not meet this requirement.**
+
 You already have the ability to specify the focal point of an image manually. However, if you set `autoFocalPoint=true` on your derivative, then VIPS will make a smart guess at where the centre of attention of the image is. This would be especially useful for portraits, where you might want to automatically crop to a person's face.
 
 Of course, if you manually set the focal point, then that will be used in preference - there may be occasions where the algorithm doesn't pick out the focal point you desire.

@@ -14,6 +14,10 @@ component {
 		_setTimeout( Val( arguments.vipsSettings.timeout ?: 60 ) );
 		_setVipsTmpDirectory( GetTempDirectory() & "/vips/" );
 
+		_enableFeaturesByVersion( {
+			smartcrop = "8.5.0"
+		} );
+
 		return this;
 	}
 
@@ -31,6 +35,8 @@ component {
 		,          string  outputFormat        = ""
 		,          struct  fileProperties      = {}
 	) {
+		arguments.autoFocalPoint = arguments.autoFocalPoint && _featureIsEnabled( "smartcrop" );
+
 		var originalFileExt = fileProperties.fileExt ?: "";
 		var isSvg           = originalFileExt == "svg";
 		var isGif           = originalFileExt == "gif";
@@ -41,6 +47,7 @@ component {
 		if ( len( arguments.outputFormat ) ) {
 			fileProperties.fileExt = arguments.outputFormat;
 		}
+
 
 		var sourceFile         = _tmpFile( arguments.asset );
 		var targetFile         = sourceFile & "_#CreateUUId()#.#( fileProperties.fileExt ?: '' )#";
@@ -383,6 +390,8 @@ component {
 		, required string  vipsQuality
 		,          boolean smartcrop = false
 	){
+		arguments.smartcrop = arguments.smartcrop && _featureIsEnabled( "smartcrop" );
+
 		var newTargetFile = _pathFileNamePrefix( arguments.targetFile, "tn_" );
 		var outputFormat  = "tn_%s.#ListLast( newTargetFile, '.' )#";
 		var size          = "#_int( arguments.width )#x#_int( arguments.height )#";
@@ -462,6 +471,50 @@ component {
 		var dirName = GetDirectoryFromPath( arguments.path );
 
 		return dirName & arguments.prefix & fileName;
+	}
+
+	private void function _enableFeaturesByVersion( required struct features ) {
+		_enabledFeatures = {};
+		var vipsVersion  = _getVipsVersion();
+
+		for( var feature in arguments.features ) {
+			_enabledFeatures[ feature ] = _compareVersions( vipsVersion, arguments.features[ feature ] ) != -1;
+		}
+	}
+
+	private boolean function _featureIsEnabled( required string feature ) {
+		return $helpers.isTrue( _enabledFeatures[ arguments.feature ] ?: "" );
+	}
+
+	private string function _getVipsVersion() {
+		var version = _exec( "vips", "--vips-version" );
+		    version = listFirst( version, "-" );
+		    version = listLast( version, " " );
+
+		return version;
+	}
+
+	private numeric function _compareVersions( required string versionA, required string versionB ) {
+		if ( versionA == versionB ) {
+			return 0;
+		}
+
+		var a = ListToArray( versionA, "." );
+		var b = ListToArray( versionB, "." );
+
+		for( var i=1; i <= a.len(); i++ ) {
+			if ( b.len() < i ) {
+				return 1;
+			}
+			if ( a[i] > b[i] ) {
+				return 1;
+			}
+			if ( a[i] < b[i] ) {
+				return -1;
+			}
+		}
+
+		return -1;
 	}
 
 // GETTERS AND SETTERS
