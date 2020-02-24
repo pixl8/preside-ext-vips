@@ -6,10 +6,12 @@ component {
 
 // CONSTRUCTOR
 	/**
+	 * @svgToPngService.inject svgToPngService
 	 * @vipsSettings.inject    coldbox:setting:vips
 	 *
 	 */
-	public any function init( required struct vipsSettings ) {
+	public any function init( required any svgToPngService, required struct vipsSettings ) {
+		_setSvgToPngService( arguments.svgToPngService );
 		_setBinDir( arguments.vipsSettings.binDir ?: "/usr/bin" );
 		_setTimeout( Val( arguments.vipsSettings.timeout ?: 60 ) );
 		_setVipsTmpDirectory( GetTempDirectory() & "/vips/" );
@@ -42,7 +44,10 @@ component {
 		var isGif           = originalFileExt == "gif";
 
 		if ( isSvg ) {
+			arguments.asset = _getSvgToPngService().SVGToPngBinary( arguments.asset, arguments.width, arguments.height );
 			fileProperties.fileExt = "png";
+
+			return arguments.asset;
 		}
 		if ( len( arguments.outputFormat ) ) {
 			fileProperties.fileExt = arguments.outputFormat;
@@ -118,7 +123,10 @@ component {
 		var isGif           = originalFileExt == "gif";
 
 		if ( isSvg ) {
+			arguments.asset = _getSvgToPngService().SVGToPngBinary( arguments.asset, arguments.width, arguments.height );
 			fileProperties.fileExt = "png";
+
+			return arguments.asset;
 		}
 		if ( len( arguments.outputFormat ) ) {
 			fileProperties.fileExt = arguments.outputFormat;
@@ -541,5 +549,12 @@ component {
 	}
 	private void function _setTimeout( required numeric timeout ) {
 		_timeout = arguments.timeout;
+	}
+
+	private any function _getSvgToPngService() {
+	    return _svgToPngService;
+	}
+	private void function _setSvgToPngService( required any svgToPngService ) {
+	    _svgToPngService = arguments.svgToPngService;
 	}
 }
