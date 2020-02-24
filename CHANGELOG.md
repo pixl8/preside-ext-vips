@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.7
+
+* [#19](https://github.com/pixl8/preside-ext-vips/issues/19) Fix regression where SVG resizing was not working on all systems (revert previous change).
+
 ## v1.0.6
 
 * [#17](https://github.com/pixl8/preside-ext-vips/issues/17)  AutoFocalPoint fails on older versions of libvips
