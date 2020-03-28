@@ -299,7 +299,7 @@ component {
 	}
 
 	private number function _int( required numeric value ) {
-		return numberFormat( arguments.value, "0" );
+		return numberFormat( ceiling( arguments.value ), "0" );
 	}
 
 	private string function _cfToVipsQuality( required string quality, required string fileExtension ) {
@@ -353,11 +353,11 @@ component {
 	) {
 		var originX     = 0;
 		var originY     = 0;
-		var cropCentreX = originX + _int( arguments.width  / 2 );
-		var cropCentreY = originY + _int( arguments.height / 2 );
+		var cropCentreX = originX + int( arguments.width  / 2 );
+		var cropCentreY = originY + int( arguments.height / 2 );
 		var focalPoint  = len( arguments.focalPoint ) ? arguments.focalPoint : "0.5,0.5";
-		var focalPointX = _int( listFirst( focalPoint ) * imageInfo.width  );
-		var focalPointY = _int( listLast(  focalPoint ) * imageInfo.height );
+		var focalPointX = int( listFirst( focalPoint ) * imageInfo.width  );
+		var focalPointY = int( listLast(  focalPoint ) * imageInfo.height );
 
 		if ( focalPointX > cropCentreX ) {
 			originX = min( originX + ( focalPointX - cropCentreX ), imageInfo.width - arguments.width );

@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.8
+
+* [#20](https://github.com/pixl8/preside-ext-vips/issues/20) Issue with dimension rounding and certain combinations of source/target sizes
+
 ## v1.0.7
 
 * [#19](https://github.com/pixl8/preside-ext-vips/issues/19) Fix regression where SVG resizing was not working on all systems (revert previous change).
