@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.9
+
+* [#21](https://github.com/pixl8/preside-ext-vips/issues/21) Return width and height of generated asset derivative
+
 ## v1.0.8
 
 * [#20](https://github.com/pixl8/preside-ext-vips/issues/20) Issue with dimension rounding and certain combinations of source/target sizes
