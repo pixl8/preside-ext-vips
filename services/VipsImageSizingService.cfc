@@ -104,6 +104,9 @@ component {
 				targetFile = _thumbnail( targetFile, imageInfo, arguments.width, arguments.height, vipsQuality, useAutoFocalPoint );
 			}
 		}
+		imageInfo             = getImageInformation( filePath=targetFile );
+		fileProperties.width  = imageInfo.width;
+		fileProperties.height = imageInfo.height;
 
 		var binary = FileReadBinary( targetFile );
 		_deleteFile( targetFile );
@@ -139,6 +142,8 @@ component {
 		var requiresConversion = ( fileProperties.fileExt ?: "" ) != originalFileExt;
 
 		if ( imageInfo.width <= arguments.width && imageInfo.height <= arguments.height && !requiresConversion ) {
+			fileProperties.width  = imageInfo.width;
+			fileProperties.height = imageInfo.height;
 			return arguments.asset;
 		}
 
@@ -171,6 +176,10 @@ component {
 		} else if ( requiresConversion ) {
 			targetFile = _thumbnail( targetFile, imageInfo, imageInfo.width, imageInfo.height, vipsQuality );
 		}
+
+		imageInfo             = getImageInformation( filePath=targetFile );
+		fileProperties.width  = imageInfo.width;
+		fileProperties.height = imageInfo.height;
 
 		var binary = FileReadBinary( targetFile );
 		_deleteFile( targetFile );
