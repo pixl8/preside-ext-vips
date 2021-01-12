@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.10
+
+* [#22](https://github.com/pixl8/preside-ext-vips/issues/22) Ensure scaleToFit operations cannot make resultant image smaller than the provided dimension
+* Convert to Github actions publishing flow
+
 ## v1.0.9
 
 * [#21](https://github.com/pixl8/preside-ext-vips/issues/21) Return width and height of generated asset derivative
