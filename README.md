@@ -2,7 +2,9 @@
 
 This extension swaps out the ImageMagick/native lucee implementation of image resizing in favour of using [libvips](https://libvips.github.io/libvips/).
 
-**It requires Preside 10.11 or greater (recommended 10.11.25).**
+
+
+**It requires Preside 10.11 or greater (recommended 10.11.25) and as of 10.14.0, is included in the Preside core (so not required).**
 
 ## Installation
 

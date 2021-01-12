@@ -1,8 +1,8 @@
 {
     "name":"Preside Extension: libvips image processing",
     "type":"preside-extensions",
-    "version":"VERSION_NUMBER",
-    "location":"https://s3.eu-west-2.amazonaws.com/pixl8-public-packages/vips/DOWNLOAD_LOCATION",
+    "version":"$VERSION_NUMBER",
+    "location":"$DOWNLOAD_URL",
     "private":false,
     "author":"Pixl8 Group",
     "directory":"application/extensions",
