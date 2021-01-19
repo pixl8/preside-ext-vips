@@ -14,7 +14,6 @@ component {
 		_setSvgToPngService( arguments.svgToPngService );
 		_setBinDir( arguments.vipsSettings.binDir ?: "/usr/bin" );
 		_setTimeout( Val( arguments.vipsSettings.timeout ?: 60 ) );
-		_setVipsTmpDirectory( GetTempDirectory() & "/vips/" );
 
 		_enableFeaturesByVersion( {
 			smartcrop = "8.5.0"
@@ -536,13 +535,11 @@ component {
 
 // GETTERS AND SETTERS
 	private string function _getVipsTmpDirectory() {
+		var _vipsTmpDirectory = GetTempDirectory() & "/vips/";
+		DirectoryCreate( _vipsTmpDirectory, true, true );
 		return _vipsTmpDirectory;
 	}
-	private void function _setVipsTmpDirectory( required string vipsTmpDirectory ) {
-		_vipsTmpDirectory = arguments.vipsTmpDirectory;
 
-		DirectoryCreate( _vipsTmpDirectory, true, true );
-	}
 
 	private string function _getBinDir() {
 		return _binDir;
