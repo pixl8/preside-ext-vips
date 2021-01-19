@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.11
+
+* [#23](https://github.com/pixl8/preside-ext-vips/issues/23) Fix issues with Lucee deleting the tmp directory that we create for VIPS operations. Always ensure it exists when retreiving it for use.
+
 ## v1.0.10
 
 * [#22](https://github.com/pixl8/preside-ext-vips/issues/22) Ensure scaleToFit operations cannot make resultant image smaller than the provided dimension
